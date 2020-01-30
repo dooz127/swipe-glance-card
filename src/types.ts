@@ -1,13 +1,22 @@
 import { ActionConfig } from 'custom-card-helpers';
 
-// TODO Add your configuration elements here for type-checking
-export interface BoilerplateCardConfig {
+export interface SwipeGlanceCardConfig {
   type: string;
+  entities: SwipeGlanceElementConfig[];
+  title?: string;
+  show_name?: boolean;
+  show_icon?: boolean;
+  show_state?: boolean;
+  theme?: string;
+  columns?: number;
+}
+export interface SwipeGlanceElementConfig {
+  entity: string;
   name?: string;
-  show_warning?: boolean;
-  show_error?: boolean;
-  test_gui?: boolean;
-  entity?: string;
+  icon?: string;
+  image?: string;
+  show_last_changed?: boolean;
+  show_state?: boolean;
   tap_action?: ActionConfig;
   hold_action?: ActionConfig;
   double_tap_action?: ActionConfig;

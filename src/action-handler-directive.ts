@@ -164,16 +164,15 @@ class ActionHandler extends HTMLElement implements ActionHandler {
   }
 }
 
-// TODO You need to replace all instances of "action-handler-boilerplate" with "action-handler-<your card name>"
-customElements.define('action-handler-boilerplate', ActionHandler);
+customElements.define('action-handler-swipe-glance-card', ActionHandler);
 
 const getActionHandler = (): ActionHandler => {
   const body = document.body;
-  if (body.querySelector('action-handler-boilerplate')) {
-    return body.querySelector('action-handler-boilerplate') as ActionHandler;
+  if (body.querySelector('action-handler-swipe-glance-card')) {
+    return body.querySelector('action-handler-swipe-glance-card') as ActionHandler;
   }
 
-  const actionhandler = document.createElement('action-handler-boilerplate');
+  const actionhandler = document.createElement('action-handler-swipe-glance-card');
   body.appendChild(actionhandler);
 
   return actionhandler as ActionHandler;
