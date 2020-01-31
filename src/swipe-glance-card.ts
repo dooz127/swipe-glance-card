@@ -1,7 +1,7 @@
-/* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { LitElement, html, customElement, property, CSSResult, TemplateResult, css, PropertyValues } from "lit-element";
-import { ifDefined } from "lit-html/directives/if-defined";
+import { LitElement, html, customElement, property, CSSResult, TemplateResult, css, PropertyValues } from 'lit-element';
+import { classMap } from 'lit-html/directives/class-map';
+import { ifDefined } from 'lit-html/directives/if-defined';
 
 import {
   HomeAssistant,
@@ -13,48 +13,49 @@ import {
   applyThemesOnElement,
   LovelaceCard,
   computeRTLDirection,
-} from "custom-card-helpers";
+  computeObjectId,
+} from 'custom-card-helpers';
 
-import Swiper from "swiper";
+import Swiper from 'swiper';
 
-import { SwipeGlanceCardConfig, SwipeGlanceElementConfig } from "./types";
-import { actionHandler } from "./action-handler-directive";
-import { CARD_VERSION } from "./const";
+import { SwipeGlanceCardConfig, SwipeGlanceElementConfig, SwiperParametersConfig } from './types';
+import { actionHandler } from './action-handler-directive';
+import { CARD_VERSION } from './const';
 
-import { localize } from "./localize/localize";
+import { localize } from './localize/localize';
 
 /* eslint no-console: 0 */
 console.info(
-  `%c  SWIPE-GLANCE-CARD \n%c  ${localize("common.version")} ${CARD_VERSION}    `,
-  "color: orange; font-weight: bold; background: black",
-  "color: white; font-weight: bold; background: dimgray",
+  `%c  SWIPE-GLANCE-CARD \n%c  ${localize('common.version')} ${CARD_VERSION}    `,
+  'color: orange; font-weight: bold; background: black',
+  'color: white; font-weight: bold; background: dimgray',
 );
 
-@customElement("swipe-glance-card")
+@customElement('swipe-glance-card')
 export class SwipeGlanceCard extends LitElement implements LovelaceCard {
   @property() public hass?: HomeAssistant;
   @property() private _config?: SwipeGlanceCardConfig;
   @property() private _configEntities?: SwipeGlanceElementConfig[];
   @property() private _swiper?: Swiper;
+  @property() private _swiper_parameters?: SwiperParametersConfig;
   @property() private _loaded?: boolean;
-  @property() private enableSwiper?: boolean;
 
   public getCardSize(): number {
     // TODO: support custom number of rows
-    return this._config!.title ? 2 : 1;
+    return this._config && this._config.title ? 2 : 1;
   }
 
   public setConfig(config: SwipeGlanceCardConfig): void {
     if (!config || !Array.isArray(config.entities)) {
-      throw new Error(localize("common.invalid_configuration"));
+      throw new Error(localize('common.invalid_configuration'));
     }
 
-    this._config = { theme: "default", ...config };
+    this._config = { theme: 'default', ...config };
 
     const entities = config.entities.map((entityConf, index) => {
-      if (typeof entityConf === "string") {
+      if (typeof entityConf === 'string') {
         entityConf = { entity: entityConf };
-      } else if (typeof entityConf === "object" && !Array.isArray(entityConf)) {
+      } else if (typeof entityConf === 'object' && !Array.isArray(entityConf)) {
         if (!entityConf.entity) {
           throw new Error(`Entity object at position ${index} is missing entity field.`);
         }
@@ -67,8 +68,8 @@ export class SwipeGlanceCard extends LitElement implements LovelaceCard {
 
     for (const entity of entities) {
       if (
-        (entity.tap_action && entity.tap_action.action === "call-service" && !entity.tap_action.service) ||
-        (entity.hold_action && entity.hold_action.action === "call-service" && !entity.hold_action.service)
+        (entity.tap_action && entity.tap_action.action === 'call-service' && !entity.tap_action.service) ||
+        (entity.hold_action && entity.hold_action.action === 'call-service' && !entity.hold_action.service)
       ) {
         throw new Error("Missing required property 'service' when tap_action or hold_action is call-service");
       }
@@ -76,13 +77,12 @@ export class SwipeGlanceCard extends LitElement implements LovelaceCard {
 
     this._configEntities = entities;
 
-    const numEntities = config.entities.length;
-    const columns = config.columns || Math.min(numEntities, 5);
-    this.style.setProperty("--glance-column-width", `${100 / columns}%`);
-
-    if (numEntities > columns) {
-      this.enableSwiper = true;
-    }
+    this._swiper_parameters = {
+      setWrapperSize: true,
+      slidesPerView: config.columns || Math.min(entities.length, 5),
+      watchOverflow: true,
+      ...config.swiper_parameters,
+    };
 
     if (this.hass) {
       this.requestUpdate();
@@ -91,7 +91,7 @@ export class SwipeGlanceCard extends LitElement implements LovelaceCard {
 
   public connectedCallback(): void {
     super.connectedCallback();
-    if (this._config && this.hass && !this._loaded && this.enableSwiper) {
+    if (this._config && this.hass && !this._loaded) {
       this._initialLoad();
     } else if (this._swiper) {
       this._swiper.update();
@@ -100,21 +100,23 @@ export class SwipeGlanceCard extends LitElement implements LovelaceCard {
 
   protected updated(changedProperties: PropertyValues): void {
     super.updated(changedProperties);
-    if (this._config && this.hass && this.isConnected && !this._loaded && this.enableSwiper) {
-      this._initialLoad();
-    } else if (this._swiper) {
-      this._swiper.update();
-    }
-    const oldHass = changedProperties.get("hass") as HomeAssistant | undefined;
-    const oldConfig = changedProperties.get("_config") as SwipeGlanceCardConfig | undefined;
+
+    const oldHass = changedProperties.get('hass') as HomeAssistant | undefined;
+    const oldConfig = changedProperties.get('_config') as SwipeGlanceCardConfig | undefined;
 
     if (!oldHass || !oldConfig || oldHass.themes !== this.hass!.themes || oldConfig.theme !== this._config!.theme) {
       applyThemesOnElement(this, this.hass!.themes, this._config!.theme);
     }
+
+    if (this._config && this.hass && this.isConnected && !this._loaded) {
+      this._initialLoad();
+    } else if (this._swiper) {
+      this._swiper.update();
+    }
   }
 
   protected shouldUpdate(changedProperties: PropertyValues): boolean {
-    const oldHass = changedProperties.get("hass") as HomeAssistant | undefined;
+    const oldHass = changedProperties.get('hass') as HomeAssistant | undefined;
 
     if (
       !this._configEntities ||
@@ -143,28 +145,25 @@ export class SwipeGlanceCard extends LitElement implements LovelaceCard {
 
     return html`
       <ha-card .header="${title}" class="swiper-container" dir="${ifDefined(computeRTLDirection(this.hass))}">
-        <div class="swiper-wrapper">
+        <div class="swiper-wrapper ${classMap({ 'no-header': !title })}">
           ${this._configEntities!.map(entityConf => this.renderEntity(entityConf))}
-          ${this._config.parameters === undefined || "pagination" in this._config.parameters
-        ? html`
-              <div class="swiper-pagination"></div>
-                  `
-        : ""
-      }
-          ${this._config.parameters === undefined || "navigation" in this._config.parameters
-        ? html`
-               <div class="swiper-button-next"></div>
-               <div class="swiper-button-prev"></div>
-              `
-        : ""
-      }
-          ${this._config.parameters === undefined || "scrollbar" in this._config.parameters
-        ? html`
-               <div class="swiper-scrollbar"></div>
-              `
-        : ""
-      }
         </div>
+        ${this._config._swiper_parameters === undefined || 'pagination' in this._config._swiper_parameters
+          ? html`
+              <div class="swiper-pagination"></div>
+            `
+          : ''}
+        ${this._config._swiper_parameters === undefined || 'navigation' in this._config._swiper_parameters
+          ? html`
+              <div class="swiper-button-next"></div>
+              <div class="swiper-button-prev"></div>
+            `
+          : ''}
+        ${this._config._swiper_parameters === undefined || 'scrollbar' in this._config._swiper_parameters
+          ? html`
+              <div class="swiper-scrollbar"></div>
+            `
+          : ''}
       </ha-card>
     `;
   }
@@ -174,37 +173,28 @@ export class SwipeGlanceCard extends LitElement implements LovelaceCard {
 
     await this.updateComplete;
 
-    if (
-      this._config!.parameters &&
-      "pagination" in this._config!.parameters! &&
-      this._config!.parameters!.pagination!.el
-    ) {
-      this._config!.parameters!.pagination!.el = this.shadowRoot!.querySelector(".swiper-pagination")!;
+    if ('pagination' in this._swiper_parameters! && this._swiper_parameters!.pagination!.el) {
+      this._swiper_parameters!.pagination!.el = this.shadowRoot!.querySelector('.swiper-pagination')!;
     }
 
-    if (this._config!.parameters && "navigation" in this._config!.parameters!) {
-      if (this._config!.parameters!.navigation!.nextEl) {
-        this._config!.parameters!.navigation!.nextEl = this.shadowRoot!.querySelector(".swiper-button-next")!;
+    if (this._swiper_parameters && 'navigation' in this._swiper_parameters!) {
+      if (this._swiper_parameters!.navigation!.nextEl) {
+        this._swiper_parameters!.navigation!.nextEl = this.shadowRoot!.querySelector('.swiper-button-next')!;
       }
 
-      if (this._config!.parameters!.navigation!.prevEl) {
-        this._config!.parameters!.navigation!.prevEl = this.shadowRoot!.querySelector(".swiper-button-prev")!;
+      if (this._swiper_parameters!.navigation!.prevEl) {
+        this._swiper_parameters!.navigation!.prevEl = this.shadowRoot!.querySelector('.swiper-button-prev')!;
       }
     }
 
-    if (
-      this._config!.parameters &&
-      "scrollbar" in this._config!.parameters! &&
-      this._config!.parameters!.scrollbar!.el
-    ) {
-      this._config!.parameters!.scrollbar!.el = this.shadowRoot!.querySelector(".swiper-scrollbar")!;
+    if ('scrollbar' in this._swiper_parameters! && this._swiper_parameters!.scrollbar!.el) {
+      this._swiper_parameters!.scrollbar!.el = this.shadowRoot!.querySelector('.swiper-scrollbar')!;
     }
 
-    this._swiper = new Swiper(this.shadowRoot!.querySelector(".swiper-container"), this._config!.parameters);
+    this._swiper = new Swiper(this.shadowRoot!.querySelector('.swiper-container'), this._swiper_parameters);
   }
 
   private _handleAction(ev: ActionHandlerEvent): void {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const config = (ev.currentTarget as any).config as SwipeGlanceElementConfig;
     handleAction(this, this.hass!, config, ev.detail.action!);
   }
@@ -214,38 +204,36 @@ export class SwipeGlanceCard extends LitElement implements LovelaceCard {
 
     if (!stateObj) {
       return html`
-        <hui-warning-element label = ${ this.hass!.localize("ui.panel.lovelace.warning.entity_not_found", "entity", entityConf.entity)}>
+        <hui-warning-element
+          label=${this.hass!.localize('ui.panel.lovelace.warning.entity_not_found', 'entity', entityConf.entity)}
+        >
         </hui-warning-element>
       `;
     }
 
     const name =
-      entityConf.name != undefined
-        ? entityConf.name
-        : stateObj
-          ? stateObj.attributes.friendlyName || stateObj.entity_id
-          : "";
+      entityConf.name === undefined
+        ? stateObj.attributes.friendlyName || computeObjectId(stateObj.entity_id).replace(/_/g, ' ')
+        : entityConf.name || '';
 
     return html`
-      <div class="swiper-slide"
-        .config = "${entityConf}"
+      <div
+        class="swiper-slide"
+        .config="${entityConf}"
         @action=${this._handleAction}
         .actionHandler=${actionHandler({
-      hasHold: hasAction(entityConf.hold_action),
-      hasDoubleTap: hasAction(entityConf.double_tap_action),
-    })}
+          hasHold: hasAction(entityConf.hold_action),
+          hasDoubleTap: hasAction(entityConf.double_tap_action),
+        })}
         tabindex=${ifDefined(hasAction(entityConf.tap_action) ? 0 : undefined)}
       >
-      ${
-      this._config!.show_name !== false
-        ? html`
+        ${this._config!.show_name !== false
+          ? html`
               <div class="name">${name}</div>
             `
-        : ""
-      }
-    ${
-      this._config!.show_icon !== false
-        ? html`
+          : ''}
+        ${this._config!.show_icon !== false
+          ? html`
               <state-badge
                 .hass=${this.hass}
                 .stateObj=${stateObj}
@@ -254,28 +242,23 @@ export class SwipeGlanceCard extends LitElement implements LovelaceCard {
                 stateColor
               ></state-badge>
             `
-        : ''
-      }
-    ${
-      this._config!.show_state !== false && entityConf.show_state !== false
-        ? html`
+          : ''}
+        ${this._config!.show_state !== false && entityConf.show_state !== false
+          ? html`
               <div>
                 ${entityConf.show_last_changed
-            ? relativeTime(new Date(stateObj.last_changed), this.hass!.localize)
-            : computeStateDisplay(this.hass!.localize, stateObj, this.hass!.language)}
+                  ? relativeTime(new Date(stateObj.last_changed), this.hass!.localize)
+                  : computeStateDisplay(this.hass!.localize, stateObj, this.hass!.language)}
               </div>
             `
-        : ''
-      }
-    ${
-      this._swiper
-        ? html`
+          : ''}
+        ${this._swiper
+          ? html`
             </div>
           `
-        : ""
-      }
-    </div>
-      `;
+          : ''}
+      </div>
+    `;
   }
 
   static get styles(): CSSResult {
@@ -284,30 +267,28 @@ export class SwipeGlanceCard extends LitElement implements LovelaceCard {
         display: flex;
         padding: 0 16px 4px;
         flex-wrap: nowrap;
-        overflow-x: auto;
-        overflow-y: hidden;
+        overflow: hidden;
+        --layout-scroll_-_-webkit-overflow-scrolling: touch;
       }
       .swiper-wrapper.no-header {
         padding-top: 16px;
       }
-      .swider-slide {
-        box-sizing: border-box;
+      .swiper-slide {
         padding: 0 4px;
         display: flex;
         flex-direction: column;
         align-items: center;
         cursor: pointer;
         margin-bottom: 12px;
-        width: var(--glance-column-width, 20%);
       }
-      .swider-slide:focus {
+      .swiper-slide:focus {
         outline: none;
         background: var(--divider-color);
         border-radius: 14px;
         padding: 4px;
         margin: -4px 0;
       }
-      .swider-slide div {
+      .swiper-slide div {
         width: 100%;
         text-align: center;
         white-space: nowrap;
@@ -316,6 +297,7 @@ export class SwipeGlanceCard extends LitElement implements LovelaceCard {
       }
       .name {
         min-height: var(--paper-font-body1_-_line-height, 20px);
+        text-transform: capitalize;
       }
       state-badge {
         margin: 8px 0;

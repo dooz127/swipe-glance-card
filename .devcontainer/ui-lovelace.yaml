@@ -4,8 +4,31 @@ resources:
 views:
   - cards:
       - type: custom:swipe-glance-card
-        title: Swipe Glance Card Development
+        title: Swipe Glance Card 1
         entities:
+          - entity: sun.sun
+          - entity: sun.sun
+          - entity: sun.sun
+          - entity: sun.sun
+          - entity: sun.sun
+          - entity: sun.sun
+      - type: custom:swipe-glance-card
+        entities:
+          - entity: sun.sun
+          - entity: sun.sun
+          - entity: sun.sun
+          - entity: sun.sun
+          - entity: sun.sun
+          - entity: sun.sun
+      - type: custom:swipe-glance-card
+        title: Swipe Glance Card 3
+        entities:
+          - entity: sun.sun
+          - entity: sun.sun
+          - entity: sun.sun
+          - entity: sun.sun
+          - entity: sun.sun
+          - entity: sun.sun
           - entity: sun.sun
           - entity: sun.sun
           - entity: sun.sun

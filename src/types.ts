@@ -8,11 +8,7 @@ export interface SwipeGlanceCardConfig extends LovelaceCardConfig {
   show_state?: boolean;
   theme?: string;
   columns?: number;
-  parameters?: {
-    navigation?: { prevEl?: object; nextEl?: object };
-    pagination?: { el?: object };
-    scrollbar?: { el?: object };
-  };
+  swiper_parameters?: SwiperParametersConfig;
 }
 export interface SwipeGlanceElementConfig {
   entity: string;
@@ -26,4 +22,12 @@ export interface SwipeGlanceElementConfig {
   tap_action?: ActionConfig;
   hold_action?: ActionConfig;
   double_tap_action?: ActionConfig;
+}
+export interface SwiperParametersConfig {
+  slidesPerView?: number;
+  watchOverflow?: boolean;
+  navigation?: { prevEl?: object; nextEl?: object };
+  pagination?: { el?: object };
+  scrollbar?: { el?: object };
+  setWrapperSize?: boolean;
 }
