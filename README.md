@@ -40,7 +40,7 @@ I relied on these persons' repositories for ideas and best practices:
 
 - [Thomas Loven](https://github.com/thomasloven/)
 - [Ian T. Rich](https://github.com/iantrich)
-- []
+- [Bram Kragten](https://github.com/bramkragten)
 
 ## License
 

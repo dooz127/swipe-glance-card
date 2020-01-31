@@ -1,74 +1,137 @@
-import { LitElement, html, customElement, property, CSSResult, TemplateResult, css, PropertyValues } from 'lit-element';
+/* eslint-disable prettier/prettier */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+import { LitElement, html, customElement, property, CSSResult, TemplateResult, css, PropertyValues } from "lit-element";
+import { ifDefined } from "lit-html/directives/if-defined";
+
 import {
   HomeAssistant,
-  hasConfigOrEntityChanged,
   hasAction,
   ActionHandlerEvent,
   handleAction,
   relativeTime,
   computeStateDisplay,
   applyThemesOnElement,
-} from 'custom-card-helpers';
-import { classMap } from 'lit-html/directives/class-map';
-import { ifDefined } from 'lit-html/directives/if-defined';
-import { HassEntity } from 'home-assistant-js-websocket';
+  LovelaceCard,
+  computeRTLDirection,
+} from "custom-card-helpers";
 
-import { SwipeGlanceCardConfig, SwipeGlanceElementConfig } from './types';
-import { actionHandler } from './action-handler-directive';
-import { CARD_VERSION } from './const';
+import Swiper from "swiper";
 
-import { localize } from './localize/localize';
+import { SwipeGlanceCardConfig, SwipeGlanceElementConfig } from "./types";
+import { actionHandler } from "./action-handler-directive";
+import { CARD_VERSION } from "./const";
+
+import { localize } from "./localize/localize";
 
 /* eslint no-console: 0 */
 console.info(
-  `%c  SWIPE-GLANCE-CARD \n%c  ${localize('common.version')} ${CARD_VERSION}    `,
-  'color: orange; font-weight: bold; background: black',
-  'color: white; font-weight: bold; background: dimgray',
+  `%c  SWIPE-GLANCE-CARD \n%c  ${localize("common.version")} ${CARD_VERSION}    `,
+  "color: orange; font-weight: bold; background: black",
+  "color: white; font-weight: bold; background: dimgray",
 );
 
-@customElement('swipe-glance-card')
-export class SwipeGlanceCard extends LitElement {
+@customElement("swipe-glance-card")
+export class SwipeGlanceCard extends LitElement implements LovelaceCard {
   @property() public hass?: HomeAssistant;
   @property() private _config?: SwipeGlanceCardConfig;
   @property() private _configEntities?: SwipeGlanceElementConfig[];
+  @property() private _swiper?: Swiper;
+  @property() private _loaded?: boolean;
+  @property() private enableSwiper?: boolean;
 
   public getCardSize(): number {
     // TODO: support custom number of rows
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     return this._config!.title ? 2 : 1;
   }
 
   public setConfig(config: SwipeGlanceCardConfig): void {
-    if (!config) {
-      throw new Error(localize('common.invalid_configuration'));
+    if (!config || !Array.isArray(config.entities)) {
+      throw new Error(localize("common.invalid_configuration"));
     }
 
-    this._config = { theme: 'default', ...config };
-    const entities = this.processConfigEntities<SwipeGlanceElementConfig>(config.entities);
+    this._config = { theme: "default", ...config };
+
+    const entities = config.entities.map((entityConf, index) => {
+      if (typeof entityConf === "string") {
+        entityConf = { entity: entityConf };
+      } else if (typeof entityConf === "object" && !Array.isArray(entityConf)) {
+        if (!entityConf.entity) {
+          throw new Error(`Entity object at position ${index} is missing entity field.`);
+        }
+      } else {
+        throw new Error(`Invalid entity specified at position ${index}.`);
+      }
+
+      return entityConf;
+    });
 
     for (const entity of entities) {
       if (
-        (entity.tap_action && entity.tap_action.action === 'call-service' && !entity.tap_action.service) ||
-        (entity.hold_action && entity.hold_action.action === 'call-service' && !entity.hold_action.service)
+        (entity.tap_action && entity.tap_action.action === "call-service" && !entity.tap_action.service) ||
+        (entity.hold_action && entity.hold_action.action === "call-service" && !entity.hold_action.service)
       ) {
-        throw new Error('Missing required property "service" when tap_action or hold_action is call-service');
+        throw new Error("Missing required property 'service' when tap_action or hold_action is call-service");
       }
+    }
 
-      const columns = config.columns || Math.min(config.entities.length, 5);
-      this.style.setProperty('--glance-column-width', `${100 / columns}%`);
+    this._configEntities = entities;
 
-      // TODO: support custom number of rows
+    const numEntities = config.entities.length;
+    const columns = config.columns || Math.min(numEntities, 5);
+    this.style.setProperty("--glance-column-width", `${100 / columns}%`);
 
-      this._configEntities = entities;
+    if (numEntities > columns) {
+      this.enableSwiper = true;
+    }
 
-      if (this.hass) {
-        this.requestUpdate();
-      }
+    if (this.hass) {
+      this.requestUpdate();
     }
   }
 
-  protected shouldUpdate(changedProps: PropertyValues): boolean {
-    return hasConfigOrEntityChanged(this, changedProps, false);
+  public connectedCallback(): void {
+    super.connectedCallback();
+    if (this._config && this.hass && !this._loaded && this.enableSwiper) {
+      this._initialLoad();
+    } else if (this._swiper) {
+      this._swiper.update();
+    }
+  }
+
+  protected updated(changedProperties: PropertyValues): void {
+    super.updated(changedProperties);
+    if (this._config && this.hass && this.isConnected && !this._loaded && this.enableSwiper) {
+      this._initialLoad();
+    } else if (this._swiper) {
+      this._swiper.update();
+    }
+    const oldHass = changedProperties.get("hass") as HomeAssistant | undefined;
+    const oldConfig = changedProperties.get("_config") as SwipeGlanceCardConfig | undefined;
+
+    if (!oldHass || !oldConfig || oldHass.themes !== this.hass!.themes || oldConfig.theme !== this._config!.theme) {
+      applyThemesOnElement(this, this.hass!.themes, this._config!.theme);
+    }
+  }
+
+  protected shouldUpdate(changedProperties: PropertyValues): boolean {
+    const oldHass = changedProperties.get("hass") as HomeAssistant | undefined;
+
+    if (
+      !this._configEntities ||
+      !oldHass ||
+      oldHass.themes !== this.hass!.themes ||
+      oldHass.language !== this.hass!.language
+    ) {
+      return true;
+    }
+
+    for (const entity of this._configEntities) {
+      if (oldHass.states[entity.entity] !== this.hass!.states[entity.entity]) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   protected render(): TemplateResult | void {
@@ -79,66 +142,80 @@ export class SwipeGlanceCard extends LitElement {
     const { title } = this._config;
 
     return html`
-      <ha-card .header="${title}">
-        <div class="${classMap({ entities: true, 'no-header': !title })}">
+      <ha-card .header="${title}" class="swiper-container" dir="${ifDefined(computeRTLDirection(this.hass))}">
+        <div class="swiper-wrapper">
           ${this._configEntities!.map(entityConf => this.renderEntity(entityConf))}
+          ${this._config.parameters === undefined || "pagination" in this._config.parameters
+        ? html`
+              <div class="swiper-pagination"></div>
+                  `
+        : ""
+      }
+          ${this._config.parameters === undefined || "navigation" in this._config.parameters
+        ? html`
+               <div class="swiper-button-next"></div>
+               <div class="swiper-button-prev"></div>
+              `
+        : ""
+      }
+          ${this._config.parameters === undefined || "scrollbar" in this._config.parameters
+        ? html`
+               <div class="swiper-scrollbar"></div>
+              `
+        : ""
+      }
         </div>
       </ha-card>
     `;
   }
 
-  protected updated(changedProps: PropertyValues): void {
-    super.updated(changedProps);
-    if (!this._config || !this.hass) {
-      return;
+  private async _initialLoad(): Promise<Swiper> {
+    this._loaded = true;
+
+    await this.updateComplete;
+
+    if (
+      this._config!.parameters &&
+      "pagination" in this._config!.parameters! &&
+      this._config!.parameters!.pagination!.el
+    ) {
+      this._config!.parameters!.pagination!.el = this.shadowRoot!.querySelector(".swiper-pagination")!;
     }
 
-    const oldHass = changedProps.get('hass') as HomeAssistant | undefined;
-    const oldConfig = changedProps.get('_config') as SwipeGlanceCardConfig | undefined;
+    if (this._config!.parameters && "navigation" in this._config!.parameters!) {
+      if (this._config!.parameters!.navigation!.nextEl) {
+        this._config!.parameters!.navigation!.nextEl = this.shadowRoot!.querySelector(".swiper-button-next")!;
+      }
 
-    if (!oldHass || !oldConfig || oldHass.themes !== this.hass.themes || oldConfig.theme !== this._config.theme) {
-      applyThemesOnElement(this, this.hass.themes, this._config.theme);
+      if (this._config!.parameters!.navigation!.prevEl) {
+        this._config!.parameters!.navigation!.prevEl = this.shadowRoot!.querySelector(".swiper-button-prev")!;
+      }
     }
+
+    if (
+      this._config!.parameters &&
+      "scrollbar" in this._config!.parameters! &&
+      this._config!.parameters!.scrollbar!.el
+    ) {
+      this._config!.parameters!.scrollbar!.el = this.shadowRoot!.querySelector(".swiper-scrollbar")!;
+    }
+
+    this._swiper = new Swiper(this.shadowRoot!.querySelector(".swiper-container"), this._config!.parameters);
   }
 
-  private _handleAction(ev: ActionHandlerEvent) {
+  private _handleAction(ev: ActionHandlerEvent): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const config = (ev.currentTarget as any).config as SwipeGlanceElementConfig;
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     handleAction(this, this.hass!, config, ev.detail.action!);
   }
 
-  private processConfigEntities<SwipeGlanceElementConfig>(
-    entities: Array<SwipeGlanceElementConfig | string>,
-  ): SwipeGlanceElementConfig[] {
-    if (!entities || !Array.isArray(entities)) {
-      throw new Error('Entities need to be an array');
-    }
-
-    return entities.map((entityConf, index) => {
-      if (typeof entityConf === 'string') {
-        // tslint:disable-next-line:no-object-literal-type-assertion
-        entityConf = ({ entity: entityConf } as unknown) as SwipeGlanceElementConfig;
-      } else if (typeof entityConf === 'object' && !Array.isArray(entityConf)) {
-        if (!entityConf.entity) {
-          throw new Error(`Entity object at position ${index} is missing entity field.`);
-        }
-      } else {
-        throw new Error(`Invalid entity specified at position ${index}.`);
-      }
-
-      return entityConf;
-    });
-  }
-
-  private renderEntity(entityConf): TemplateResult {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  private renderEntity(entityConf: SwipeGlanceElementConfig): TemplateResult {
     const stateObj = this.hass!.states[entityConf.entity];
 
     if (!stateObj) {
       return html`
-        <hui-warning-element
-          label=${this.hass!.localize('ui.panel.lovelace.warning.entity_not_found', 'entity', entityConf.entity)}
-        ></hui-warning-element>
+        <hui-warning-element label = ${ this.hass!.localize("ui.panel.lovelace.warning.entity_not_found", "entity", entityConf.entity)}>
+        </hui-warning-element>
       `;
     }
 
@@ -146,29 +223,29 @@ export class SwipeGlanceCard extends LitElement {
       entityConf.name != undefined
         ? entityConf.name
         : stateObj
-        ? stateObj.attributes.friendlyName || stateObj.entity_id
-        : '';
+          ? stateObj.attributes.friendlyName || stateObj.entity_id
+          : "";
 
     return html`
-      <div
-        class="entity"
-        .config="${entityConf}"
+      <div class="swiper-slide"
+        .config = "${entityConf}"
         @action=${this._handleAction}
         .actionHandler=${actionHandler({
-          hasHold: hasAction(entityConf.hold_action),
-          hasDoubleTap: hasAction(entityConf.double_tap_action),
-        })}
-        tabindex=${ifDefined(hasAction(entityConf.tap_action) ? '0' : undefined)}
+      hasHold: hasAction(entityConf.hold_action),
+      hasDoubleTap: hasAction(entityConf.double_tap_action),
+    })}
+        tabindex=${ifDefined(hasAction(entityConf.tap_action) ? 0 : undefined)}
       >
-        ${this._config!.show_name !== false
-          ? html`
-              <div class="name">
-                ${'name' in entityConf ? entityConf.name : this.computeStateName(stateObj)}
-              </div>
+      ${
+      this._config!.show_name !== false
+        ? html`
+              <div class="name">${name}</div>
             `
-          : ''}
-        ${this._config!.show_icon !== false
-          ? html`
+        : ""
+      }
+    ${
+      this._config!.show_icon !== false
+        ? html`
               <state-badge
                 .hass=${this.hass}
                 .stateObj=${stateObj}
@@ -177,31 +254,43 @@ export class SwipeGlanceCard extends LitElement {
                 stateColor
               ></state-badge>
             `
-          : ''}
-        ${this._config!.show_state !== false && entityConf.show_state !== false
-          ? html`
+        : ''
+      }
+    ${
+      this._config!.show_state !== false && entityConf.show_state !== false
+        ? html`
               <div>
                 ${entityConf.show_last_changed
-                  ? relativeTime(new Date(stateObj.last_changed), this.hass!.localize)
-                  : computeStateDisplay(this.hass!.localize, stateObj, this.hass!.language)}
+            ? relativeTime(new Date(stateObj.last_changed), this.hass!.localize)
+            : computeStateDisplay(this.hass!.localize, stateObj, this.hass!.language)}
               </div>
             `
-          : ''}
-      </div>
-    `;
+        : ''
+      }
+    ${
+      this._swiper
+        ? html`
+            </div>
+          `
+        : ""
+      }
+    </div>
+      `;
   }
 
   static get styles(): CSSResult {
     return css`
-      .entities {
+      .swiper-wrapper {
         display: flex;
         padding: 0 16px 4px;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
       }
-      .entities.no-header {
+      .swiper-wrapper.no-header {
         padding-top: 16px;
       }
-      .entity {
+      .swider-slide {
         box-sizing: border-box;
         padding: 0 4px;
         display: flex;
@@ -211,14 +300,14 @@ export class SwipeGlanceCard extends LitElement {
         margin-bottom: 12px;
         width: var(--glance-column-width, 20%);
       }
-      .entity:focus {
+      .swider-slide:focus {
         outline: none;
         background: var(--divider-color);
         border-radius: 14px;
         padding: 4px;
         margin: -4px 0;
       }
-      .entity div {
+      .swider-slide div {
         width: 100%;
         text-align: center;
         white-space: nowrap;
@@ -230,6 +319,21 @@ export class SwipeGlanceCard extends LitElement {
       }
       state-badge {
         margin: 8px 0;
+      }
+      .swiper-pagination-bullet-active {
+        background: var(--primary-color);
+      }
+      .swiper-pagination-progressbar.swiper-pagination-progressbar-fill {
+        background: var(--primary-color);
+      }
+      .swiper-scrollbar-drag {
+        background: var(--primary-color);
+      }
+      .swiper-button-prev {
+        background-image: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 27 44'><path d='M0,22L22,0l2.1,2.1L4.2,22l19.9,19.9L22,44L0,22L0,22L0,22z' fill='var(--primary-color)'/></svg>");
+      }
+      .swiper-button-next {
+        background-image: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 27 44'><path d='M27,22L27,22L5,44l-2.1-2.1L22.8,22L2.9,2.1L5,0L27,22L27,22z' fill='var(--primary-color)'/></svg>");
       }
     `;
   }
