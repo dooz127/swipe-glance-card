@@ -4,21 +4,21 @@ import { classMap } from 'lit-html/directives/class-map';
 import { ifDefined } from 'lit-html/directives/if-defined';
 
 import {
-  HomeAssistant,
-  hasAction,
   ActionHandlerEvent,
-  handleAction,
-  relativeTime,
-  computeStateDisplay,
-  applyThemesOnElement,
+  HomeAssistant,
   LovelaceCard,
-  computeRTLDirection,
+  applyThemesOnElement,
   computeObjectId,
+  computeRTLDirection,
+  computeStateDisplay,
+  handleAction,
+  hasAction,
+  relativeTime,
 } from 'custom-card-helpers';
 
 import Swiper from 'swiper';
 
-import { SwipeGlanceCardConfig, SwipeGlanceElementConfig, SwiperParametersConfig } from './types';
+import { SwipeGlanceCardConfig, SwipeGlanceElementConfig, SwiperParametersConfig, LovelaceElement } from './types';
 import { actionHandler } from './action-handler-directive';
 import { DEFAULT_NO_COLS, DEFAULT_NO_ROWS, CARD_VERSION } from './const';
 
@@ -33,12 +33,19 @@ console.info(
 
 @customElement('swipe-glance-card')
 export class SwipeGlanceCard extends LitElement implements LovelaceCard {
-  @property() public hass?: HomeAssistant;
+  @property() private _hass?: HomeAssistant;
   @property() private _config?: SwipeGlanceCardConfig;
   @property() private _configEntities?: SwipeGlanceElementConfig[];
   @property() private _swiper?: Swiper;
   @property() private _swiper_parameters?: SwiperParametersConfig;
   @property() private _loaded?: boolean;
+
+  set hass(hass: HomeAssistant) {
+    this._hass = hass;
+    this.shadowRoot!.querySelectorAll('#swiper-wrapper > div > *').forEach((element: unknown) => {
+      (element as LovelaceElement).hass = hass;
+    });
+  }
 
   public getCardSize(): number {
     // TODO: support custom number of rows
@@ -74,24 +81,25 @@ export class SwipeGlanceCard extends LitElement implements LovelaceCard {
         throw new Error("Missing required property 'service' when tap_action or hold_action is call-service");
       }
     }
-
     this._configEntities = entities;
 
     this._swiper_parameters = {
+      freeModeSticky: true,
       setWrapperSize: true,
       slidesPerView: config.columns || Math.min(entities.length, DEFAULT_NO_COLS),
+      spaceBetween: 10,
       watchOverflow: true,
       ...config.swiper_parameters,
     };
 
-    if (this.hass) {
+    if (this._hass) {
       this.requestUpdate();
     }
   }
 
   public connectedCallback(): void {
     super.connectedCallback();
-    if (this._config && this.hass && !this._loaded) {
+    if (this._config && this._hass && !this._loaded) {
       this._initialLoad();
     } else if (this._swiper) {
       this._swiper.update();
@@ -104,11 +112,11 @@ export class SwipeGlanceCard extends LitElement implements LovelaceCard {
     const oldHass = changedProperties.get('hass') as HomeAssistant | undefined;
     const oldConfig = changedProperties.get('_config') as SwipeGlanceCardConfig | undefined;
 
-    if (!oldHass || !oldConfig || oldHass.themes !== this.hass!.themes || oldConfig.theme !== this._config!.theme) {
-      applyThemesOnElement(this, this.hass!.themes, this._config!.theme);
+    if (!oldHass || !oldConfig || oldHass.themes !== this._hass!.themes || oldConfig.theme !== this._config!.theme) {
+      applyThemesOnElement(this, this._hass!.themes, this._config!.theme);
     }
 
-    if (this._config && this.hass && this.isConnected && !this._loaded) {
+    if (this._config && this._hass && this.isConnected && !this._loaded) {
       this._initialLoad();
     } else if (this._swiper) {
       this._swiper.update();
@@ -121,14 +129,14 @@ export class SwipeGlanceCard extends LitElement implements LovelaceCard {
     if (
       !this._configEntities ||
       !oldHass ||
-      oldHass.themes !== this.hass!.themes ||
-      oldHass.language !== this.hass!.language
+      oldHass.themes !== this._hass!.themes ||
+      oldHass.language !== this._hass!.language
     ) {
       return true;
     }
 
     for (const entity of this._configEntities) {
-      if (oldHass.states[entity.entity] !== this.hass!.states[entity.entity]) {
+      if (oldHass.states[entity.entity] !== this._hass!.states[entity.entity]) {
         return true;
       }
     }
@@ -137,14 +145,14 @@ export class SwipeGlanceCard extends LitElement implements LovelaceCard {
   }
 
   protected render(): TemplateResult | void {
-    if (!this._config || !this.hass) {
+    if (!this._config || !this._hass) {
       return html``;
     }
 
     const { title } = this._config;
 
     return html`
-      <ha-card .header="${title}" class="swiper-container" dir="${ifDefined(computeRTLDirection(this.hass))}">
+      <ha-card .header="${title}" class="swiper-container" dir="${ifDefined(computeRTLDirection(this._hass))}">
         <div class="swiper-wrapper ${classMap({ 'no-header': !title })}">
           ${this._configEntities!.map(entityConf => this.renderEntity(entityConf))}
         </div>
@@ -196,16 +204,16 @@ export class SwipeGlanceCard extends LitElement implements LovelaceCard {
 
   private _handleAction(ev: ActionHandlerEvent): void {
     const config = (ev.currentTarget as any).config as SwipeGlanceElementConfig;
-    handleAction(this, this.hass!, config, ev.detail.action!);
+    handleAction(this, this._hass!, config, ev.detail.action!);
   }
 
   private renderEntity(entityConf: SwipeGlanceElementConfig): TemplateResult {
-    const stateObj = this.hass!.states[entityConf.entity];
+    const stateObj = this._hass!.states[entityConf.entity];
 
     if (!stateObj) {
       return html`
         <hui-warning-element
-          label=${this.hass!.localize('ui.panel.lovelace.warning.entity_not_found', 'entity', entityConf.entity)}
+          label=${this._hass!.localize('ui.panel.lovelace.warning.entity_not_found', 'entity', entityConf.entity)}
         >
         </hui-warning-element>
       `;
@@ -235,7 +243,7 @@ export class SwipeGlanceCard extends LitElement implements LovelaceCard {
         ${this._config!.show_icon !== false
           ? html`
               <state-badge
-                .hass=${this.hass}
+                .hass=${this._hass}
                 .stateObj=${stateObj}
                 .overrideIcon=${entityConf.icon}
                 .overrideImage=${entityConf.image}
@@ -247,8 +255,8 @@ export class SwipeGlanceCard extends LitElement implements LovelaceCard {
           ? html`
               <div>
                 ${entityConf.show_last_changed
-                  ? relativeTime(new Date(stateObj.last_changed), this.hass!.localize)
-                  : computeStateDisplay(this.hass!.localize, stateObj, this.hass!.language)}
+                  ? relativeTime(new Date(stateObj.last_changed), this._hass!.localize)
+                  : computeStateDisplay(this._hass!.localize, stateObj, this._hass!.language)}
               </div>
             `
           : ''}
@@ -264,9 +272,8 @@ export class SwipeGlanceCard extends LitElement implements LovelaceCard {
   static get styles(): CSSResult {
     return css`
       .swiper-wrapper {
-        display: flex;
+        display: inline-flex;
         flex-wrap: nowrap;
-        overflow: hidden;
         --layout-scroll_-_-webkit-overflow-scrolling: touch;
       }
       .swiper-wrapper.no-header {
