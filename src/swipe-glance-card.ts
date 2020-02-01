@@ -20,7 +20,7 @@ import Swiper from 'swiper';
 
 import { SwipeGlanceCardConfig, SwipeGlanceElementConfig, SwiperParametersConfig } from './types';
 import { actionHandler } from './action-handler-directive';
-import { CARD_VERSION } from './const';
+import { DEFAULT_NO_COLS, DEFAULT_NO_ROWS, CARD_VERSION } from './const';
 
 import { localize } from './localize/localize';
 
@@ -79,7 +79,7 @@ export class SwipeGlanceCard extends LitElement implements LovelaceCard {
 
     this._swiper_parameters = {
       setWrapperSize: true,
-      slidesPerView: config.columns || Math.min(entities.length, 5),
+      slidesPerView: config.columns || Math.min(entities.length, DEFAULT_NO_COLS),
       watchOverflow: true,
       ...config.swiper_parameters,
     };
@@ -265,7 +265,6 @@ export class SwipeGlanceCard extends LitElement implements LovelaceCard {
     return css`
       .swiper-wrapper {
         display: flex;
-        padding: 0 16px 4px;
         flex-wrap: nowrap;
         overflow: hidden;
         --layout-scroll_-_-webkit-overflow-scrolling: touch;
@@ -274,7 +273,6 @@ export class SwipeGlanceCard extends LitElement implements LovelaceCard {
         padding-top: 16px;
       }
       .swiper-slide {
-        padding: 0 4px;
         display: flex;
         flex-direction: column;
         align-items: center;

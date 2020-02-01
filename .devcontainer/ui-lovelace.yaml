@@ -24,6 +24,7 @@ views:
         title: Swipe Glance Card 3
         entities:
           - entity: sun.sun
+            name: moon
           - entity: sun.sun
           - entity: sun.sun
           - entity: sun.sun
@@ -35,3 +36,4 @@ views:
           - entity: sun.sun
           - entity: sun.sun
           - entity: sun.sun
+            icon: mdi:star
