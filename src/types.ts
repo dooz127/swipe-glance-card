@@ -24,17 +24,8 @@ export interface SwipeGlanceElementConfig extends LovelaceElementConfig {
 }
 export interface SwiperParametersConfig extends LovelaceElementConfig {
   freeModeSticky?: boolean;
-  navigation?: { prevEl?: object; nextEl?: object };
-  pagination?: { el?: object };
-  scrollbar?: { el?: object };
-  setWrapperSize?: boolean;
-  slidesOffsetBefore?: number;
-  slidesOffsetAfter?: number;
   slidesPerView?: number;
-  spaceBetween?: number;
   watchOverflow?: boolean;
-  watchSlidesProgress?: boolean;
-  watchSlidesVisibility?: boolean;
 }
 // TODO: add LovelaceElement to custom-card-helpers
 export interface LovelaceElement extends HTMLElement {

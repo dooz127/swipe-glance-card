@@ -61,8 +61,8 @@ views:
           type: 'custom:swipe-glance-card'
         filter:
           include:
-            - domain: person
-            - domain: light
-            - domain: fan
+            - domain: binary_sensor
+            - domain: climate
+            - domain: cover
         sort:
           method: name

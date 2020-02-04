@@ -1,6 +1,6 @@
 # :point_up_2: Swipe Glance Card
 
-Add a :point_up_2:Swipe Glance Card to your [Home Assistant](https://www.home-assistant.io/) set-up. It's mostly an exercise for me to learn development for this platform but hopefully it can useful for you if want glance and swipe on your mobile device.
+Add a :point_up_2:Swipe Glance Card to your [Home Assistant](https://www.home-assistant.io/) set-up. It may be useful for you if want glance and swipe on your mobile device.
 
 ## Install
 
@@ -16,15 +16,54 @@ For more information, see Thomas Loven's [Lovelace-Plugins](https://github.com/t
 
 ## Swipe Glance Card Configuration
 
-The :point_up_2:Swipe Glance Card has the same configuration variables as the default [Lovelace Glance Card](https://www.home-assistant.io/lovelace/glance/#configuration-variables).
+The :point_up_2:Swipe Glance Card has the same configuration variables as the default [Lovelace Glance Card](https://www.home-assistant.io/lovelace/glance#configuration-variables). I highly recommend using Thomas Loven's [auto-entities plugin](https://github.com/thomasloven/lovelace-auto-entities) to auto-populate and sort the entities and his [card-mod plug-in](https://github.com/thomasloven/lovelace-card-mod) for styling (not all styling options are supported at this time).
 
-### Options for Entities
+### Example simple configuration
 
-Entities have the same options as the default [Lovelace Glance Card](https://www.home-assistant.io/lovelace/glance/#options-for-entities). For different styling options, I highly recommend Thomas Loven's [card-mod plug-in](https://github.com/thomasloven/lovelace-card-mod).
+```yaml
+entities:
+  - entity: sun.sun
+  - entity: sun.sun
+  - entity: sun.sun
+  - entity: sun.sun
+  - entity: sun.sun
+  - entity: sun.sun
+title: Swipe Glance Card 1
+type: 'custom:swipe-glance-card'
+```
 
-### Options for Swiper
+### Example configuration with card-mod plugin, no title, no state
 
-This card integrates the excellent [SwiperJS](https://swiperjs.com/) plugin. You can see the [API](https://swiperjs.com/api/) for additional configuration options.
+```yaml
+entities:
+  - entity: sun.sun
+  - entity: sun.sun
+  - entity: sun.sun
+  - entity: sun.sun
+  - entity: sun.sun
+  - entity: sun.sun
+style: |
+  ha-card {
+    font-variant: small-caps;
+  }
+  .card-header {
+    font-size: 16px;
+  }
+show_state: false
+type: 'custom:swipe-glance-card'
+```
+
+### Example configuration with auto-entities plugin
+
+```yaml
+card:
+  title: Swipe Glance Card 3
+  type: 'custom:swipe-glance-card'
+filter:
+  template: |
+    {{ states|map(attribute='entity_id')|join('\n') }}
+type: 'custom:auto-entities'
+```
 
 ## Author
 
@@ -32,7 +71,11 @@ This card integrates the excellent [SwiperJS](https://swiperjs.com/) plugin. You
 
 ## Acknowledgments
 
-I cribbed a lot of these persons' repositories for ideas and best practices:
+This card integrates the excellent [SwiperJS](https://swiperjs.com/) plugin. Future versions of this card will support more of the [API](https://swiperjs.com/api/).
+configuration options.
+
+I cribbed a lot of these persons' repositories (especially Bram's [swipe-card plugin](https://github.com/bramkragten/custom-ui/tree/master/swipe-card)) for ideas and best practices:
+
 - [Bram Kragten](https://github.com/bramkragten)
 - [Thomas Loven](https://github.com/thomasloven/)
 - [Ian T. Rich](https://github.com/iantrich)
