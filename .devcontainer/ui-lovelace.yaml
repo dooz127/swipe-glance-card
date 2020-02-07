@@ -18,6 +18,11 @@ views:
           }
         entities:
           - entity: sun.sun
+            options:
+              style: |
+                :host {
+                  --paper-item-icon-color: green
+                }
           - entity: sun.sun
           - entity: sun.sun
           - entity: sun.sun
@@ -48,21 +53,88 @@ views:
           - entity: sun.sun
           - entity: sun.sun
             icon: mdi:star
-      - type: 'custom:auto-entities'
+      - type: "custom:auto-entities"
         card:
+          swiper_parameters:
+            navigation:
+              nextEl: ".swiper-button-next"
+              prevEl: ".swiper-button-prev"
           title: Swipe Glance Card 4
-          type: 'custom:swipe-glance-card'
+          type: "custom:swipe-glance-card"
         filter:
           template: |
             {{ states|map(attribute='entity_id')|join('\n') }}
-      - type: 'custom:auto-entities'
+      - type: "custom:auto-entities"
         card:
+          swiper_parameters:
+            pagination:
+              el: ".swiper-pagination"
           title: Swipe Glance Card 5
-          type: 'custom:swipe-glance-card'
+          type: "custom:swipe-glance-card"
         filter:
           include:
             - domain: binary_sensor
             - domain: climate
             - domain: cover
+        sort:
+          method: name
+      - type: "custom:auto-entities"
+        card:
+          swiper_parameters:
+            scrollbar:
+              el: ".swiper-scrollbar"
+              dynamicBullets: true
+          title: Swipe Glance Card 6
+          type: "custom:swipe-glance-card"
+        filter:
+          include:
+            - domain: binary_sensor
+              options:
+                style: |
+                  :host {
+                    --paper-item-icon-color: green
+                  }
+            - domain: climate
+              options:
+                style: |
+                  :host {
+                    --paper-item-icon-color: green
+                  }
+            - domain: cover
+              options:
+                style: |
+                  :host {
+                    --paper-item-icon-color: green
+                  }
+        sort:
+          method: name
+      - type: "custom:auto-entities"
+        card:
+          swiper_parameters:
+            scrollbar:
+              el: ".swiper-scrollbar"
+              dynamicBullets: true
+          title: Swipe Glance Card 7
+          type: glance
+        filter:
+          include:
+            - domain: binary_sensor
+              options:
+                style: |
+                  :host {
+                    --paper-item-icon-color: green
+                  }
+            - domain: climate
+              options:
+                style: |
+                  :host {
+                    --paper-item-icon-color: green
+                  }
+            - domain: cover
+              options:
+                style: |
+                  :host {
+                    --paper-item-icon-color: green
+                  }
         sort:
           method: name

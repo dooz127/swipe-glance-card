@@ -1,6 +1,6 @@
 {
   "name": "swipe-glance-card",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Lovelace Swipe Glance Card",
   "keywords": [
     "home-assistant",
@@ -39,6 +39,7 @@
     "rollup-plugin-babel": "^4.3.3",
     "rollup-plugin-commonjs": "^10.1.0",
     "rollup-plugin-node-resolve": "^5.2.0",
+    "rollup-plugin-postcss": "^2.0.6",
     "rollup-plugin-serve": "^1.0.1",
     "rollup-plugin-terser": "^5.1.2",
     "rollup-plugin-typescript2": "^0.24.3",

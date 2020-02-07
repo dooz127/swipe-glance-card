@@ -24,6 +24,10 @@ export interface SwipeGlanceElementConfig extends LovelaceElementConfig {
 }
 export interface SwiperParametersConfig extends LovelaceElementConfig {
   freeModeSticky?: boolean;
+  navigation?: { prevEl?: object; nextEl?: object };
+  pagination?: { el?: object };
+  scrollbar?: { el?: object };
+  setWrapperSize?: boolean;
   slidesPerView?: number;
   watchOverflow?: boolean;
 }
