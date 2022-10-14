@@ -160,7 +160,7 @@ export class SwipeGlanceCard extends LitElement implements LovelaceCard {
     return html`
       <ha-card .header="${title}">
         <div class="card-content">
-          <link rel="stylesheet" href="https://unpkg.com/swiper/css/swiper.min.css" />
+          <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@8/swiper-bundle.min.css" />
           <div class="swiper-container ${classMap({ 'no-header': !title })}">
             <div class="swiper-wrapper ${classMap({ 'swiper-control': showPagination || showScrollbar })}">
               ${this._configEntities!.map(entityConf => this.renderEntity(entityConf))}
