@@ -1,6 +1,6 @@
 {
   "name": "swipe-glance-card",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Lovelace Swipe Glance Card",
   "keywords": [
     "home-assistant",
@@ -11,7 +11,7 @@
     "custom-cards"
   ],
   "module": "swipe-glance-card.js",
-  "repository": "git@github.com:hanunes/swipe-glance-card.git",
+  "repository": "git@github.com:dooz127/swipe-glance-card.git",
   "author": "Duy Nguyen <dooz127@gmail.com>",
   "license": "MIT",
   "dependencies": {
